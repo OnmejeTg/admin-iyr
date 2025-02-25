@@ -46,6 +46,8 @@ const AddFunding = () => {
         formDataToSend.append(key, formData[key]);
       }
     }
+    console.log(formDataToSend);
+    // return;
 
     try {
       await api.post(`/fundings`, formDataToSend, {
@@ -87,6 +89,8 @@ const AddFunding = () => {
         formDataToSend.append(key, formData[key]);
       }
     }
+
+    console.log(formDataToSend);
 
     try {
       await api.post(`/fundings`, formDataToSend, {

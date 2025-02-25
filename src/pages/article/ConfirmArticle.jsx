@@ -35,6 +35,7 @@ const ConfirmArticle = () => {
       console.error("Error deleting article:", error);
     }
   };
+
   return (
     <div>
       <h1 className="text-xl">Are you Sure?</h1>

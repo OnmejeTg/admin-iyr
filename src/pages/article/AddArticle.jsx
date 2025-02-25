@@ -14,98 +14,117 @@ const AddArticle = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Handle Input Changes (both text and file inputs)
   const handleInputChange = (e) => {
-    const { name, type, files, value } = e.target;
-
+    const { name, value, type, files } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: type === "file" ? files[0] : value,
     }));
   };
 
-  // Handle Article Submission (replaces handleSave & handleSaveAndAdd)
-  const handleSubmit = async (redirect = true) => {
+  const saveArticle = async (resetForm = false) => {
     setIsLoading(true);
-
     const formDataToSend = new FormData();
+
+    // Append all fields including the file
     Object.entries(formData).forEach(([key, value]) => {
-      if (value) formDataToSend.append(key, value);
+      if (value !== null && value !== undefined) {
+        formDataToSend.append(key, value);
+      }
     });
 
+    // Log form data for debugging
+    console.log("FormData contents:");
+    for (const [key, value] of formDataToSend.entries()) {
+      console.log(key, value);
+    }
+
     try {
-      await api.post("/articles", formDataToSend, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // Removed manual Content-Type header
+      await api.post("/articles", formDataToSend);
 
-      toast.success("Article saved successfully!");
+      toast.success("Article saved successfully!", { autoClose: 3000 });
 
-      if (redirect) {
-        navigate("/opportunities/articles");
-      } else {
-        // Reset form for new entry
+      if (resetForm) {
         setFormData({ title: "", content: "", link: "", thumbnail: null });
+        document.querySelector("input[type='file']").value = ""; // Reset file input
+      } else {
+        navigate("/opportunities/articles");
       }
     } catch (error) {
       console.error("Error saving article:", error);
-      toast.error("Failed to save article. Please try again.");
+      toast.error(
+        `Failed to save article: ${
+          error.response?.data?.message || error.message
+        }`,
+        {
+          autoClose: 5000,
+        }
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Reusable Input Field Component
-  const InputField = ({ label, name, type }) => (
-    <div>
-      <label className="block font-medium">{label}:</label>
-      <input
-        type={type}
-        name={name}
-        className="border p-2 w-full rounded-md"
-        onChange={handleInputChange}
-        {...(type !== "file" ? { value: formData[name] || "" } : {})}
-      />
-    </div>
-  );
-
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white shadow-md rounded-md">
       <h2 className="text-xl font-semibold mb-4">Add Article</h2>
 
-      {/* Form Fields */}
       <div className="mt-4 space-y-4">
         {[
-          { label: "Title", name: "title", type: "text" },
-          { label: "Content", name: "content", type: "text" },
+          { label: "Title", name: "title", type: "text", required: true },
+          { label: "Content", name: "content", type: "text", required: true },
           { label: "Link", name: "link", type: "text" },
-          { label: "Photo", name: "thumbnail", type: "file" },
+          { label: "Photo", name: "thumbnail", type: "file", required: true },
         ].map((field) => (
-          <InputField key={field.name} {...field} />
+          <InputField
+            key={field.name}
+            {...field}
+            value={field.type !== "file" ? formData[field.name] : undefined}
+            onChange={handleInputChange}
+          />
         ))}
       </div>
 
-      {/* Buttons */}
-      <div className="mt-6 flex flex-col gap-y-1 md:flex-row justify-between">
-        <div className="flex flex-col space-x-2 gap-y-1 md:flex-row">
-          {[
-            { name: "Save and Add Another", action: () => handleSubmit(false) },
-            { name: "Save", action: () => handleSubmit(true) },
-          ].map(({ name, action }, i) => (
-            <button
-              key={i}
-              className={`px-4 py-2 rounded-md ${
-                i === 1 ? "bg-blue-700" : "bg-blue-500"
-              } text-white`}
-              onClick={action}
-              disabled={isLoading}
-            >
-              {isLoading ? "Saving..." : name}
-            </button>
-          ))}
-        </div>
+      <div className="mt-6 flex flex-col md:flex-row justify-between space-y-2 md:space-y-0">
+        {[
+          { name: "Save and Add Another", action: () => saveArticle(true) },
+          { name: "Save", action: () => saveArticle(false) },
+        ].map(({ name, action }, i) => (
+          <button
+            key={i}
+            className={`px-4 py-2 rounded-md text-white transition ${
+              isLoading
+                ? "bg-gray-400 cursor-not-allowed"
+                : i === 1
+                ? "bg-blue-700 hover:bg-blue-800"
+                : "bg-blue-500 hover:bg-blue-600"
+            }`}
+            onClick={action}
+            disabled={isLoading}
+          >
+            {isLoading ? "Saving..." : name}
+          </button>
+        ))}
       </div>
     </div>
   );
 };
+
+const InputField = ({ label, name, type, value, onChange, required }) => (
+  <div>
+    <label className="block font-medium">
+      {label}:{required && <span className="text-red-500 ml-1">*</span>}
+    </label>
+    <input
+      type={type}
+      name={name}
+      onChange={onChange}
+      className="border p-2 w-full rounded-md"
+      {...(type === "file" ? {} : { value })}
+      required={required}
+    />
+  </div>
+);
 
 export default AddArticle;
