@@ -8,40 +8,49 @@ const AddArticle = () => {
     title: "",
     content: "",
     link: "",
-    thumbnail: null,
+    thumbnail: null, // Ensure file input is handled properly
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
-    const { name, value, type, files } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "file" ? files[0] : value,
-    }));
+    const { name, value, type, checked, files } = e.target;
+
+    if (type === "file") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: files[0], // Store the file object
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
+    }
   };
 
   const saveArticle = async (resetForm = false) => {
     setIsLoading(true);
     const formDataToSend = new FormData();
 
-    // Append all fields including the file
-    Object.entries(formData).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        formDataToSend.append(key, value);
+    for (const key in formData) {
+      if (formData[key] !== null && formData[key] !== undefined) {
+        formDataToSend.append(key, formData[key]);
       }
-    });
+    }
 
-    // Log form data for debugging
     console.log("FormData contents:");
     for (const [key, value] of formDataToSend.entries()) {
       console.log(key, value);
     }
 
     try {
-      // Removed manual Content-Type header
-      await api.post("/articles", formDataToSend);
+      await api.post("/articles", formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       toast.success("Article saved successfully!", { autoClose: 3000 });
 
@@ -57,9 +66,7 @@ const AddArticle = () => {
         `Failed to save article: ${
           error.response?.data?.message || error.message
         }`,
-        {
-          autoClose: 5000,
-        }
+        { autoClose: 5000 }
       );
     } finally {
       setIsLoading(false);
@@ -128,3 +135,4 @@ const InputField = ({ label, name, type, value, onChange, required }) => (
 );
 
 export default AddArticle;
+
